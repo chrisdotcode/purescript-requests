@@ -1,23 +1,17 @@
 module Network.Responseable.Internal.Browser (request) where
 
-import Prelude           (($), Unit)
-import Control.Monad.Aff (Aff, makeAff)
-import Control.Monad.Eff (Eff)
-import Data.Either       (Either(Left, Right))
+import Prelude (($), Unit)
 
-import Network.Responseable.Internal.Types (InternalRequest, InternalResponse)
+import Control.Monad.Aff           (Aff, makeAff)
+import Control.Monad.Eff           (Eff)
+import Control.Monad.Eff.Exception (Error)
 
-foreign import requestImpl :: forall e. (String -> Either String InternalResponse) -> -- ^ Left function
-			      (InternalResponse -> Either String InternalResponse) -> -- ^ Right function
-			      (Either String InternalResponse -> Eff e Unit)       ->
-			      InternalRequest                                      ->
-			      Eff e Unit
+import Network.Responseable.Internal.Types (Request, Response)
 
-requestImpl' :: forall e. (Either String InternalResponse -> Eff e Unit) ->
-		InternalRequest                                ->
-		Eff e Unit
-requestImpl' = requestImpl Left Right
+foreign import requestImpl :: forall e. (Error    -> Eff e Unit) ->
+					(Response -> Eff e Unit) ->
+					Request                  ->
+					Eff e Unit
 
-request :: forall e. InternalRequest -> Aff e (Either String InternalResponse)
-request req = makeAff $ \_ callback -> requestImpl' callback req
-
+request :: forall e. Request -> Aff e Response
+request req = makeAff $ \errback callback -> requestImpl errback callback req

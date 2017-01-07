@@ -1,12 +1,15 @@
+// The way PureScript parses foreign modules doesn't like the IIFE, so
+// hide it for now.
+// ;(function() {
 'use strict';
 
 // I should steal and modify the code from: https://github.com/nodejs/node/blob/accf410eb0992628b4aab3c139242a409874a4fb/lib/url.js#L558-L637
 function urlFormat(request) {
-	return request.protocol + '//' + request.hostname + ':' + request.port + request.path;
+	return request.protocol + request.hostname + ':' + request.port + request.path;
 }
 
 // Stolen from https://gist.github.com/monsur/706839
-function parseHeader(headersStr) {
+function parseHeaders(headersStr) {
 	var headers = {};
 
 	var headerPairs = headersStr.split('\u000d\u000a'); // \r\n
@@ -75,8 +78,7 @@ function _addHeaderLine(field, value, dest) {
 	}
 }
 
-function requestImpl(left) {
-	return function(right) {
+function requestImpl(errback) {
 	return function(callback) {
 	return function(request) {
 	return function() {
@@ -98,17 +100,18 @@ function requestImpl(left) {
 			var statusCode   = this.status;
 			var headers      = this.getAllResponseHeaders();
 
-			callback(right({statusCode: statusCode,
+			callback({statusCode: statusCode,
 				headers: parseHeaders(headers),
-				body: responseText}))();
+				body: responseText})();
 		});
 
 		browserRequest.addEventListener('error', function(error) {
-			callback(left(error))();
+			errback(error)();
 		});
 
 		browserRequest.send(request.body);
-	}}}}
+	}}}
 }
 
 exports.requestImpl = requestImpl;
+// })();
