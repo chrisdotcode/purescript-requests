@@ -1,6 +1,10 @@
 {
   "name": "purescript-responseable",
   "license": "BSD-3-Clause",
+  "repository": {                                                          
+    "type": "git",                                                         
+    "url": "git://github.com/chrisdotcode/purescript-responseable.git"            
+  },
   "ignore": [
     "**/.*",
     "node_modules",
