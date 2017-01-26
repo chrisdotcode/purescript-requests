@@ -1,6 +1,5 @@
-module Network.Responseable.Internal.Types
-	( Cookie(Cookie)
-	, Request(Request)
+module Network.HTTP.Internal.Types
+	( Request(Request)
 	, Response(Response)
 	, defRequest
 	) where
@@ -24,7 +23,7 @@ newtype Request = Request
 	}
 
 instance showRequest :: Show Request where
-	show (Request r) = "Request {"
+	show (Request r) = "(Request {"
 		<> " protocol: " <> r.protocol    <> ","
 		<> " hostname: " <> r.hostname    <> ","
 		<> " port: "     <> show r.port   <> ","
@@ -35,7 +34,7 @@ instance showRequest :: Show Request where
 		<> " password: " <> "(Foreign *)" <> ","
 		<> " body: "     <> r.body        <> ","
 		<> " timeout: "  <> "(Foreign *)" <> ","
-		<> " }"
+		<> " })"
 
 newtype Response = Response
 	{ statusCode :: Int
@@ -44,39 +43,11 @@ newtype Response = Response
 	}
 
 instance showResponse :: Show Response where
-	show (Response r) = "Response {"
+	show (Response r) = "(Response {"
 		<> " statusCode: " <> show r.statusCode  <> ","
 		<> " headers: "    <> "(Foreign *)"      <> ","
 		<> " body: "       <> r.body             <> ","
-		<> " }"
-
-newtype Cookie = Cookie
-	{ key      :: String
-	, value    :: String
-	-- You would expect the following fields to have the types that are
-	-- commented on them, however those are what the PureScript
-	-- representation of the type would be. Since JS has no types, we
-	-- represent them as whatever JS gives back, which is `Undefined|a`,
-	-- a.k.a., `Foreign`.
-	, domain   :: Foreign -- ^ Undefined String
-	, expires  :: Foreign -- ^ Undefined JSDate
-	, httpOnly :: Foreign -- ^ Undefined Boolean
-	, maxAge   :: Foreign -- ^ Undefined Number
-	, path     :: Foreign -- ^ Undefined String
-	, secure   :: Foreign -- ^ Undefined Boolean
-	}
-
-instance showCookie :: Show Cookie where
-	show (Cookie c) = "Cookie {"
-		<> " key: "      <> c.key         <> ","
-		<> " value: "    <> c.value       <> ","
-		<> " domain: "   <> "(Foreign *)" <> ","
-		<> " expires: "  <> "(Foreign *)" <> ","
-		<> " httpOnly: " <> "(Foreign *)" <> ","
-		<> " maxAge: "   <> "(Foreign *)" <> ","
-		<> " path: "     <> "(Foreign *)" <> ","
-		<> " secure: "   <> "(Foreign *)" <> ","
-		<> " }"
+		<> " })"
 
 defRequest :: Request
 defRequest = Request

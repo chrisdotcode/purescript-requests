@@ -1,4 +1,4 @@
-module Network.Responseable.Internal.Node (request) where
+module Network.HTTP.Internal.Browser (request) where
 
 import Prelude (($), Unit)
 
@@ -6,7 +6,7 @@ import Control.Monad.Aff           (Aff, makeAff)
 import Control.Monad.Eff           (Eff)
 import Control.Monad.Eff.Exception (Error)
 
-import Network.Responseable.Internal.Types (Request, Response)
+import Network.HTTP.Internal.Types (Request, Response)
 
 foreign import requestImpl :: forall e. (Error    -> Eff e Unit) ->
 					(Response -> Eff e Unit) ->

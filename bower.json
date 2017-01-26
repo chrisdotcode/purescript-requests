@@ -1,9 +1,10 @@
 {
-  "name": "purescript-responseable",
+  "name": "purescript-http",
+  "description": "Make cross-platform requests from node or the browser in pure PureScript.",
   "license": "BSD-3-Clause",
   "repository": {                                                          
     "type": "git",                                                         
-    "url": "git://github.com/chrisdotcode/purescript-responseable.git"            
+    "url": "git://github.com/chrisdotcode/purescript-http.git"
   },
   "ignore": [
     "**/.*",
@@ -23,7 +24,7 @@
     "purescript-maybe": "^2.0.1",
     "purescript-datetime": "^2.0.0",
     "purescript-uri": "^2.0.0",
-    "purescript-http-types": "^0.4.0",
+    "purescript-http-types": "^0.5.0",
     "purescript-arrays": "^3.1.0",
     "purescript-tuples": "^3.1.0",
     "purescript-strings": "^2.1.0",

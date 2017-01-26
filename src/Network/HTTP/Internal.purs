@@ -1,78 +1,55 @@
-module Network.Responseable.Internal where
+module Network.HTTP.Internal
+	( toInternalRequest
+	, fromInternalResponse
+	, Platform(Node, Browser, Other)
+	, determinePlatform
+	) where
 
-import Prelude
-	( ($)
-	, (<$>)
-	, (<>)
-	, (>>=)
-	, (<<<)
-	, (>>>)
-	, const
-	, id
-	, map
-	, pure
-	, show
-	)
+import Prelude (($), (<$>), (<>), (>>=), (<<<), map, show)
 
 import Control.Alt                  ((<|>))
-import Control.Monad.Except         (runExcept)
 import Data.Array                   (catMaybes, head, last)
-import Data.Time.Duration           (Milliseconds(Milliseconds))
-import Data.DateTime.Instant        (instant)
-import Data.Either                  (either, Either(Left, Right))
 import Data.Foldable                (foldr)
-import Data.Foreign
-	( Foreign
-	, Prop
-	, toForeign
-	, unsafeFromForeign
-	, writeObject
-	)
+import Data.Foreign                 (Foreign, Prop, toForeign, writeObject)
 import Data.Foreign.Class           ((.=))
-import Data.Foreign.Undefined       (readUndefined, unUndefined, writeUndefined)
-import Data.Foreign.NullOrUndefined (readNullOrUndefined, unNullOrUndefined)
-import Data.JSDate                  (toDateTime)
-import Data.List                    (List, intercalate, null)
+import Data.Foreign.Undefined       (writeUndefined)
+import Data.List                    (intercalate, null)
 import Data.List.NonEmpty           (fromFoldable, singleton, toList) as L
 import Data.Map                     (fromFoldable, lookup, toList)
 import Data.Maybe                   (Maybe(Just, Nothing), fromMaybe)
 import Data.Monoid                  (mempty)
-import Data.Path.Pathy              (parseAbsDir, parseAbsFile, rootDir)
 import Data.String                  (Pattern(Pattern), split, joinWith)
 import Data.Tuple                   (Tuple(Tuple))
 import Data.URI                     (URI(URI))
 import Data.URI.Authority           (Authority(Authority))
 import Data.URI.HierarchicalPart    (HierarchicalPart(HierarchicalPart))
-import Data.URI.Host                (Host(NameAddress), parseHost, printHost)
+import Data.URI.Host                (printHost)
 import Data.URI.Path                (printPath)
 import Data.URI.Query               (printQuery)
 import Data.URI.Scheme              (printScheme)
-import Network.HTTP.Types.Headers
+import Network.HTTP.Types.Cookie    (parse, stringify')
+import Network.HTTP.Types.Exchange
+	( Request(Request)
+	, Response(Response)
+	, Auth(BasicAuth)
+	)
+import Network.HTTP.Types.Header
 	( Headers
 	, HeaderName(Cookie, SetCookie)
 	, HeaderValue(HVStr, HVList)
 	, headerNameFromString
 	) as H
-import Network.HTTP.Types.StatusCodes
+import Network.HTTP.Types.StatusCode
 	( StatusCode(StatusCode)
 	, ReasonPhrase(Custom)
 	, getRecognizedStatusCodeFromInt
 	)
-import Text.Parsing.StringParser  (runParser)
 
-import Network.Responseable.Internal.Cookies (parse)
-import Network.Responseable.Internal.Types
+import Network.HTTP.Internal.Types
 	( Request(Request)
 	, Response(Response)
-	, Cookie(Cookie)
 	, defRequest
 	) as Internal
-import Network.Responseable.Types
-	( Request(Request)
-	, Response(Response)
-	, Auth(BasicAuth)
-	, Cookie(Cookie)
-	)
 
 extractProtocol :: URI -> Maybe String
 extractProtocol (URI protocol _ _ _) = printScheme <$> protocol
@@ -102,10 +79,6 @@ toInternalHeaders :: H.Headers -> Array Prop
 toInternalHeaders = foldr toInternalHeader [] <<< toList
 	where
 		toInternalHeader (Tuple name value) o = o <> [ show name .= toInternalHeaderValue value ]
-
-toInternalCookies :: List Cookie -> String
-toInternalCookies = map (\(Cookie { name, value }) -> name <> "=" <> value) >>>
-	intercalate ";"
 
 extractUser :: String -> Maybe String
 extractUser = head <<< split (Pattern ":")
@@ -158,7 +131,7 @@ toInternalRequest (Request r) = Internal.Request
 		defReq                      = extractRequestRecord Internal.defRequest
 		protocol'                   = fromMaybe defReq.protocol $ extractProtocol r.uri
 		port'                       = messWithPort protocol' $ fromMaybe defReq.port $ extractPort r.uri
-		cookies'                    = if null r.cookies then [] else [ show H.Cookie .= toInternalCookies r.cookies ]
+		cookies'                    = if null r.cookies then [] else [ show H.Cookie .= stringify' r.cookies ]
 		getUser     (BasicAuth u _) = u
 		getPassword (BasicAuth _ p) = p
 		auth'                       = extractAuth r.uri
@@ -177,33 +150,12 @@ foreignHeadersToHeaders = fromFoldable <<< foreignHeadersToHeadersImpl
 	H.HVStr
 	(H.HVList <<< fromMaybe (L.singleton "") <<< L.fromFoldable) -- XXX Each HTTP header should logically have a value, and we should never run into an empty case (even if it's the empty string, the value would be "". But if some miracle happens, return an empty value when building our HeaderValue)
 
-internalCookieToCookie :: Internal.Cookie -> Cookie
-internalCookieToCookie (Internal.Cookie c) = Cookie
-	{ name    : c.key
-	, value   : c.value
-	-- XXX If a host can't be parsed, just convert the string domain value into a NameAddress and return it;
-	-- but maybe we should throw here?
-	, domain  : (\d -> either (const $ NameAddress d) id $ runParser parseHost d) <$> fromUndefined c.domain
-	, expires : fromUndefined c.expires >>= toDateTime
-	, httpOnly: fromUndefined c.httpOnly
-	, maxAge  : fromUndefined c.maxAge >>= (Milliseconds >>> instant)
-	, path    : fromMaybe (Left rootDir) $ fromNullOrUndefined c.path >>= \p -> (Left <$> parseAbsDir p) <|> (Right <$> parseAbsFile p)
-	, secure  : fromUndefined c.secure
-	}
-	where
-		-- This `unsafeFromForeign` here means we're always trusting tough-cookie to parse values properly;
-		-- I think that's a pretty safe assumption.
-		fromUndefined :: forall a. Foreign -> Maybe a
-		fromUndefined       = either (const Nothing) unUndefined <<< runExcept <<< readUndefined (pure <<< unsafeFromForeign)
-		fromNullOrUndefined = either (const Nothing) unNullOrUndefined <<< runExcept <<< readNullOrUndefined (pure <<< unsafeFromForeign)
-
-internalResponseToResponse :: Internal.Response -> Response
-internalResponseToResponse (Internal.Response r) = Response
+fromInternalResponse :: Internal.Response -> Response
+fromInternalResponse (Internal.Response r) = Response
 	{ statusCode: fromMaybe customStatusCode $
 		getRecognizedStatusCodeFromInt r.statusCode
 	, headers   : headers'
-	, cookies   : map (internalCookieToCookie <<< parse) $ fromHVList $
-		lookup H.SetCookie headers'
+	, cookies   : map parse $ fromHVList $ lookup H.SetCookie headers'
 	, body      : r.body
 	}
 	where
