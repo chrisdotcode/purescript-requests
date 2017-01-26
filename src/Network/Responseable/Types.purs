@@ -1,5 +1,5 @@
 module Network.Responseable.Types
-	( Auth(Auth)
+	( Auth(BasicAuth)
 	, Cookie(Cookie)
 	, Request(Request)
 	, Response(Response)
@@ -11,6 +11,7 @@ module Network.Responseable.Types
 import Prelude ((<>), class Show, show)
 
 import Data.DateTime                  (DateTime)
+import Data.Time.Duration             (Milliseconds)
 import Data.DateTime.Instant          (Instant)
 import Data.Either                    (Either(Left))
 import Data.List                      (List)
@@ -51,16 +52,11 @@ instance showCookie :: Show Cookie where
 		<> " secure: ("   <> show c.secure   <> "),"
 		<> " }"
 
-newtype Auth = Auth
-	{ user     :: Maybe String
-	, password :: Maybe String
-	}
+data Auth = BasicAuth (Maybe String) (Maybe String)
 
 instance showAuth :: Show Auth where
-	show (Auth a) = "Auth {"
-		<> " user: ("     <> show a.user     <> "),"
-		<> " password: (" <> show a.password <> "),"
-		<> " }"
+	show (BasicAuth user password) =
+		"(BasicAuth " <> show user <> " " <> show password <> " )"
 
 newtype Request = Request
 	{ uri     :: URI
@@ -69,7 +65,7 @@ newtype Request = Request
 	, cookies :: List Cookie
 	, auth    :: Maybe Auth -- ^ If Auth information is provided in both the request.uri and request.auth, the auth in request.auth is preferred.
 	, body    :: String
-	, timeout :: Maybe Int -- Really a UInt
+	, timeout :: Maybe Milliseconds
 	}
 
 instance showRequest :: Show Request where
@@ -108,14 +104,16 @@ defURI = URI
 	Nothing
 	Nothing
 
-defRequest ::
-	{ uri :: URI                          
-	, method :: Method                    
+-- XXX defaultcookie?
+
+defRequest        ::
+	{ uri     :: URI                          
+	, method  :: Method                    
 	, headers :: Headers
 	, cookies :: List Cookie
-	, auth :: Maybe Auth
-	, body :: String                      
-	, timeout :: Maybe Int
+	, auth    :: Maybe Auth
+	, body    :: String                      
+	, timeout :: Maybe Milliseconds
 	}
 defRequest =
 	{ uri    : defURI

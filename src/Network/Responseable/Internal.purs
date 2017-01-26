@@ -70,7 +70,7 @@ import Network.Responseable.Internal.Types
 import Network.Responseable.Types
 	( Request(Request)
 	, Response(Response)
-	, Auth(Auth)
+	, Auth(BasicAuth)
 	, Cookie(Cookie)
 	)
 
@@ -79,15 +79,11 @@ extractProtocol (URI protocol _ _ _) = printScheme <$> protocol
 
 -- purescript-uri allows multiple hostnames, but we only grab the first one, as more often than not, there will only be one.
 extractHostname :: URI -> Maybe String
-extractHostname (URI s (HierarchicalPart (Just (Authority _ path)) _) _ _) = case head path of
-	Just (Tuple hostname _) -> Just $ printHost hostname
-	_                       -> Nothing
+extractHostname (URI s (HierarchicalPart (Just (Authority _ [(Tuple hostname _)])) _) _ _) = Just $ printHost hostname
 extractHostname _ = Nothing
 
 extractPort :: URI -> Maybe Int
-extractPort (URI _ (HierarchicalPart (Just (Authority _ path)) _) _ _) = case head path of
-	Just (Tuple _ port) -> port
-	_                   -> Nothing
+extractPort (URI _ (HierarchicalPart (Just (Authority _ [(Tuple _ port)])) _) _ _) = port
 extractPort _ = Nothing
 
 extractPath :: URI -> String
@@ -125,10 +121,6 @@ extractAuth :: URI -> Maybe String
 extractAuth (URI _ (HierarchicalPart (Just (Authority auth _)) _) _ _) = auth
 extractAuth _                                                          = Nothing
 
--- XXX use purescript-newtype#unwrap?
-extractAuthRecord (Just (Auth a)) = Just a
-extractAuthRecord _               = Nothing
-
 toInternalRequest :: Request -> Internal.Request
 toInternalRequest (Request r) = Internal.Request
 	{ protocol: protocol'
@@ -140,9 +132,9 @@ toInternalRequest (Request r) = Internal.Request
 	, headers : writeObject $ toInternalHeaders r.headers <> cookies'
 	-- If provided, the user's authentication takes precedence over authentication provided in the URI.
 	, user    : maybeToForeign $
-		(auth >>= _.user) <|> (auth' >>= extractUser) <|> Nothing
+		(r.auth >>= getUser) <|> (auth' >>= extractUser) <|> Nothing
 	, password: maybeToForeign $
-		(auth >>= _.password) <|> (auth' >>= extractPassword) <|> Nothing
+		(r.auth >>= getPassword) <|> (auth' >>= extractPassword) <|> Nothing
 	, body    : r.body
 	, timeout : maybeToForeign r.timeout
 	}
@@ -163,12 +155,13 @@ toInternalRequest (Request r) = Internal.Request
 		messWithPort "https:" 80 = 443
 		messWithPort _        p  = p
 
-		defReq    = extractRequestRecord Internal.defRequest
-		protocol' = fromMaybe defReq.protocol $ extractProtocol r.uri
-		port'     = messWithPort protocol' $ fromMaybe defReq.port $ extractPort r.uri
-		cookies'  = if null r.cookies then [] else [ show H.Cookie .= toInternalCookies r.cookies ]
-		auth      = extractAuthRecord r.auth
-		auth'     = extractAuth r.uri
+		defReq                      = extractRequestRecord Internal.defRequest
+		protocol'                   = fromMaybe defReq.protocol $ extractProtocol r.uri
+		port'                       = messWithPort protocol' $ fromMaybe defReq.port $ extractPort r.uri
+		cookies'                    = if null r.cookies then [] else [ show H.Cookie .= toInternalCookies r.cookies ]
+		getUser     (BasicAuth u _) = u
+		getPassword (BasicAuth _ p) = p
+		auth'                       = extractAuth r.uri
 
 foreign import foreignHeadersToHeadersImpl :: forall a b. (a -> b -> (Tuple a b)) -> -- Tuple constructor XXX Can/Should I make this type more specific here?
 					      (String -> H.HeaderName)            -> -- HeaderName smart constructor
