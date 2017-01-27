@@ -1,5 +1,5 @@
 {
-  "name": "purescript-http",
+  "name": "purescript-http-request",
   "description": "Make cross-platform requests from node or the browser in pure PureScript.",
   "license": "BSD-3-Clause",
   "repository": {                                                          
