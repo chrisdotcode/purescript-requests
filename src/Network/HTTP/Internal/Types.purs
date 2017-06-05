@@ -6,8 +6,9 @@ module Network.HTTP.Internal.Types
 
 import Prelude ((<>), class Show, show)
 
-import Data.Foreign           (Foreign, writeObject)
-import Data.Foreign.Undefined (writeUndefined)
+import Data.Foreign           (Foreign, toForeign)
+
+foreign import undefined :: Foreign
 
 newtype Request = Request
 	{ protocol :: String
@@ -56,9 +57,9 @@ defRequest = Request
 	, port    : 80
 	, method  : "GET"
 	, path    : "/"
-	, headers : writeObject []
-	, user    : writeUndefined
-	, password: writeUndefined
+	, headers : toForeign []
+	, user    : undefined
+	, password: undefined
 	, body    : ""
-	, timeout : writeUndefined
+	, timeout : undefined
 	}

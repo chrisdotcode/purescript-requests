@@ -1,10 +1,10 @@
 {
-  "name": "purescript-http-request",
+  "name": "purescript-requests",
   "description": "Make cross-platform requests from node or the browser in pure PureScript.",
   "license": "BSD-3-Clause",
-  "repository": {                                                          
-    "type": "git",                                                         
-    "url": "git://github.com/chrisdotcode/purescript-http.git"
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/chrisdotcode/purescript-requests.git"
   },
   "ignore": [
     "**/.*",
@@ -13,32 +13,32 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "^2.1.0",
-    "purescript-foreign": "^3.0.1",
-    "purescript-either": "^2.1.0",
-    "purescript-lists": "^3.2.1",
-    "purescript-foldable-traversable": "^2.0.0",
-    "purescript-monoid": "^2.2.0",
-    "purescript-aff": "^2.0.2",
-    "purescript-maps": "^2.0.2",
-    "purescript-maybe": "^2.0.1",
-    "purescript-datetime": "^2.0.0",
-    "purescript-uri": "^2.0.0",
-    "purescript-http-types": "^0.5.0",
-    "purescript-arrays": "^3.1.0",
-    "purescript-tuples": "^3.1.0",
-    "purescript-strings": "^2.1.0",
-    "purescript-control": "^2.0.0",
-    "purescript-string-parsers": "^2.0.0",
-    "purescript-pathy": "^3.0.2",
-    "purescript-generics": "^3.3.0",
-    "purescript-transformers": "^2.1.0",
-    "purescript-exceptions": "^2.0.0",
-    "purescript-js-date": "^3.0.0"
+    "purescript-prelude": "^3.0.0",
+    "purescript-foreign": "^4.0.0",
+    "purescript-either": "^3.0.0",
+    "purescript-lists": "^4.6.0",
+    "purescript-foldable-traversable": "^3.3.0",
+    "purescript-monoid": "^3.0.0",
+    "purescript-aff": "^3.1.0",
+    "purescript-maps": "^3.1.0",
+    "purescript-maybe": "^3.0.0",
+    "purescript-datetime": "^3.1.0",
+    "purescript-uri": "^3.0.1",
+    "purescript-http-types": "^0.6.1",
+    "purescript-arrays": "^4.1.0",
+    "purescript-tuples": "^4.1.0",
+    "purescript-strings": "^3.1.0",
+    "purescript-control": "^3.3.0",
+    "purescript-string-parsers": "^3.0.1",
+    "purescript-pathy": "^4.0.0",
+    "purescript-generics": "^4.0.0",
+    "purescript-transformers": "^3.4.0",
+    "purescript-exceptions": "^3.0.0",
+    "purescript-js-date": "^5.0.0"
   },
   "devDependencies": {
-    "purescript-console": "^2.0.0",
-    "purescript-psci-support": "^2.0.0",
-    "purescript-debug": "^2.0.0"
+    "purescript-console": "^3.0.0",
+    "purescript-psci-support": "^3.0.0",
+    "purescript-debug": "^3.0.0"
   }
 }

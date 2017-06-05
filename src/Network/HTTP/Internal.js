@@ -37,8 +37,26 @@ function foreignHeadersToHeadersImpl(tuple) {
 			);
 		}
 		return tuplePairs;
-	}}}}
+	};};};};
 }
 
+function fromTupleImpl(fst) {
+	return function(snd) {
+	return function(pairs) {
+		var o = {};
+		// pairs is a PureScript Tuple list, not a JavaScript key:value
+		// Object, so it needs to be iterated with this variant of for.
+		for  (var i = 0, len = pairs.length; i < len; i++) {
+			var pair  = pairs[i];
+			var key   = fst(pair)();
+			var value = snd(pair)();
+			o[key] = value;
+		}
+		return o;
+	};};
+};
+
+exports.undefined                   = undefined;
 exports.determinePlatformImpl       = determinePlatformImpl;
 exports.foreignHeadersToHeadersImpl = foreignHeadersToHeadersImpl;
+exports.fromTupleImpl               = fromTupleImpl;

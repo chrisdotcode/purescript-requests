@@ -10,16 +10,14 @@ import Prelude (($), (<$>), (<>), (>>=), (<<<), map, show)
 import Control.Alt                  ((<|>))
 import Data.Array                   (catMaybes, head, last)
 import Data.Foldable                (foldr)
-import Data.Foreign                 (Foreign, Prop, toForeign, writeObject)
-import Data.Foreign.Class           ((.=))
-import Data.Foreign.Undefined       (writeUndefined)
+import Data.Foreign                 (Foreign, toForeign)
 import Data.List                    (intercalate, null)
 import Data.List.NonEmpty           (fromFoldable, singleton, toList) as L
-import Data.Map                     (fromFoldable, lookup, toList)
+import Data.Map                     (fromFoldable, lookup, toUnfoldable)
 import Data.Maybe                   (Maybe(Just, Nothing), fromMaybe)
 import Data.Monoid                  (mempty)
 import Data.String                  (Pattern(Pattern), split, joinWith)
-import Data.Tuple                   (Tuple(Tuple))
+import Data.Tuple                   (Tuple(Tuple), fst, snd)
 import Data.URI                     (URI(URI))
 import Data.URI.Authority           (Authority(Authority))
 import Data.URI.HierarchicalPart    (HierarchicalPart(HierarchicalPart))
@@ -75,10 +73,21 @@ toInternalHeaderValue :: H.HeaderValue -> String
 toInternalHeaderValue (H.HVStr   s) = s
 toInternalHeaderValue (H.HVList ss) = intercalate "," ss
 
-toInternalHeaders :: H.Headers -> Array Prop
-toInternalHeaders = foldr toInternalHeader [] <<< toList
+
+foreign import fromTupleImpl :: forall a b. (Tuple a b -> a) ->
+				(Tuple a b -> b)             ->
+				Array (Tuple a b)            ->
+				Foreign
+
+fromTuple :: forall a b. Array (Tuple a b) -> Foreign
+fromTuple = fromTupleImpl fst snd
+
+toInternalHeaders :: H.Headers -> Array (Tuple String String)
+toInternalHeaders = foldr toInternalHeader [] <<< toUnfoldable'
 	where
-		toInternalHeader (Tuple name value) o = o <> [ show name .= toInternalHeaderValue value ]
+		toInternalHeader (Tuple name value) o = o <> [ Tuple (show name) (toInternalHeaderValue value) ]
+		toUnfoldable' :: H.Headers -> Array (Tuple H.HeaderName H.HeaderValue)
+		toUnfoldable' = toUnfoldable
 
 extractUser :: String -> Maybe String
 extractUser = head <<< split (Pattern ":")
@@ -94,6 +103,8 @@ extractAuth :: URI -> Maybe String
 extractAuth (URI _ (HierarchicalPart (Just (Authority auth _)) _) _ _) = auth
 extractAuth _                                                          = Nothing
 
+foreign import undefined :: Foreign
+
 toInternalRequest :: Request -> Internal.Request
 toInternalRequest (Request r) = Internal.Request
 	{ protocol: protocol'
@@ -102,7 +113,7 @@ toInternalRequest (Request r) = Internal.Request
 	, port    : port'
 	, method  : show r.method
 	, path    : fromEmpty defReq.path $ extractPath r.uri
-	, headers : writeObject $ toInternalHeaders r.headers <> cookies'
+	, headers : fromTuple $ toInternalHeaders r.headers <> cookies'
 	-- If provided, the user's authentication takes precedence over authentication provided in the URI.
 	, user    : maybeToForeign $
 		(r.auth >>= getUser) <|> (auth' >>= extractUser) <|> Nothing
@@ -117,7 +128,7 @@ toInternalRequest (Request r) = Internal.Request
 
 		maybeToForeign :: forall a. Maybe a -> Foreign
 		maybeToForeign (Just x) = toForeign x
-		maybeToForeign _        = writeUndefined
+		maybeToForeign _        = undefined
 
 		-- XXX If the port is 80, and the protocol is 'https:' assume
 		-- the the user left the default port unchanged, and change it
@@ -131,7 +142,7 @@ toInternalRequest (Request r) = Internal.Request
 		defReq                      = extractRequestRecord Internal.defRequest
 		protocol'                   = fromMaybe defReq.protocol $ extractProtocol r.uri
 		port'                       = messWithPort protocol' $ fromMaybe defReq.port $ extractPort r.uri
-		cookies'                    = if null r.cookies then [] else [ show H.Cookie .= stringify' r.cookies ]
+		cookies'                    = if null r.cookies then [] else [ Tuple (show H.Cookie) (stringify' r.cookies) ]
 		getUser     (BasicAuth u _) = u
 		getPassword (BasicAuth _ p) = p
 		auth'                       = extractAuth r.uri
